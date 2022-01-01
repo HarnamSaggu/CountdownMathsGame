@@ -1,63 +1,60 @@
-import kotlin.math.pow
-
 fun main() {
-	val pool = getNumbers(2)
-	val target = getTarget()
-	println(pool)
-	println(target)
-	solve(pool, target).forEach { println(it) }
+	for (i in 1..10) {
+		val pool = getNumbers(2)
+		val target = getTarget()
+		println(pool)
+		println(target)
+		println()
+		println(solve(pool, target))
+		println()
+		println()
+	}
 }
 
-fun solve(pool: List<Int>, target: Int): MutableList<String> {
-	val perms = permuteList(pool)
-	val results = mutableListOf<String>()
-	for (i in perms.indices) {
-		keyLoop@ for (decimalKey in (0 until 4.0.pow(5.0).toInt())) {
-			val perm = perms[i].toMutableList()
-			val base4Key = Integer.parseInt(decimalKey.toString(), 10).toString(4).padStart(5, '0')
-			var result = perm.first()
-			perm.removeAt(0)
-			for (indvKey in base4Key) {
-				when (indvKey) {
-					'0' -> {
-						result += perm.first()
-						perm.removeAt(0)
-					}
+fun solve(pool: List<Int>, target: Int): String {
+	while (true) {
+		val attempt = attempt(pool)
+		if (attempt.first == target) return attempt.second
+	}
+}
 
-					'1' -> {
-						if (result - perm.first() >= 0) {
-							result -= perm.first()
-							perm.removeAt(0)
-						} else {
-							continue@keyLoop
-						}
-					}
+val operatorMap = mapOf(0 to '+', 1 to '-', 2 to '*', 3 to '/')
 
-					'2' -> {
-						result *= perm.first()
-						perm.removeAt(0)
-					}
-
-					'3' -> {
-						if (result % perm.first() == 0) {
-							result /= perm.first()
-							perm.removeAt(0)
-						} else {
-							continue@keyLoop
-						}
-					}
+fun attempt(pool: List<Int>): Pair<Int, String> {
+	val localPool = pool.toMutableList()
+	var log = ""
+	while (localPool.size > 1) {
+		val operands = localPool.shuffled().take(2)
+		val operator = (0..3).random()
+		val result = when (operator) {
+			0 -> {
+				operands[0] + operands[1]
+			}
+			1 -> {
+				val temp = operands[0] - operands[1]
+				if (temp >= 0) temp
+				else -1
+			}
+			2 -> {
+				operands[0] * operands[1]
+			}
+			else -> {
+				if (operands[1] == 0) -1
+				else {
+					val temp = operands[0].toDouble() / operands[1].toDouble()
+					if ((temp % 1) == 0.0) temp.toInt()
+					else -1
 				}
 			}
-			if (result == target) {
-				val operatorKey =
-					base4Key.replace("0".toRegex(), "+").replace("1".toRegex(), "-").replace("2".toRegex(), "*")
-						.replace("3".toRegex(), "/")
-				val digits = perms[i]
-				results.add("((((${digits[0]} ${operatorKey[0]} ${digits[1]}) ${operatorKey[1]} ${digits[2]}) ${operatorKey[2]} ${digits[3]}) ${operatorKey[3]} ${digits[4]}) ${operatorKey[4]} ${digits[5]}")
-			}
+		}
+		if (result != -1) {
+			localPool.remove(operands[0])
+			localPool.remove(operands[1])
+			log += "${operands[0]} ${operatorMap[operator]} ${operands[1]} = $result\n"
+			localPool.add(result)
 		}
 	}
-	return results
+	return if (log == "") Pair(-1, "") else Pair(localPool[0], log)
 }
 
 fun getTarget(): Int = (0 until 1000).random()
@@ -68,20 +65,4 @@ fun getNumbers(bigNumberCount: Int): List<Int> {
 	smallBois.shuffle()
 	bigBois.shuffle()
 	return bigBois.take(bigNumberCount) + smallBois.take(6 - bigNumberCount)
-}
-
-fun permuteList(list: List<Int>): List<List<Int>> {
-	val endList = mutableListOf<List<Int>>()
-	for (i in list.indices) {
-		val reducedList = list.subList(0, i).toMutableList()
-		if (i + 1 < list.size) reducedList.addAll(list.subList(i + 1, list.size))
-		val tail = mutableListOf<List<Int>>()
-		tail.add(listOf(list[i]))
-		if (reducedList.size == 0) return tail
-		val perms = permuteList(reducedList)
-		for (perm in perms) {
-			endList.add(listOf(list[i]) + perm)
-		}
-	}
-	return endList
 }
